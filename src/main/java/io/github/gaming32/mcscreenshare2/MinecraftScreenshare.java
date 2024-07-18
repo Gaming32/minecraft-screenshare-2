@@ -2,6 +2,7 @@ package io.github.gaming32.mcscreenshare2;
 
 import com.mojang.logging.LogUtils;
 import io.github.gaming32.mcscreenshare2.ext.MinecraftServerExt;
+import io.github.gaming32.mcscreenshare2.ext.ServerCommonPacketListenerImplExt;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -9,6 +10,7 @@ import net.minecraft.core.BlockBox;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.common.ClientboundPingPacket;
 import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,6 +26,7 @@ import java.awt.Robot;
 import java.awt.image.BufferedImage;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class MinecraftScreenshare implements ModInitializer {
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -41,7 +44,10 @@ public class MinecraftScreenshare implements ModInitializer {
             LOGGER.error("Robot not available. Cannot do screenshares.");
             return;
         }
-        ServerTickEvents.START_SERVER_TICK.register(server -> updateScreenData(robot, server));
+        ServerTickEvents.START_SERVER_TICK.register(server -> {
+            updateScreenData(robot, server);
+            updatePing(server);
+        });
         ServerTickEvents.END_WORLD_TICK.register(level -> {
             if ((level.getServer().getTickCount() & 2) != 0 || level.players().isEmpty()) return;
             final MapImage image = ((MinecraftServerExt)level.getServer()).mcscreenshare2$getMapImage();
@@ -53,6 +59,9 @@ public class MinecraftScreenshare implements ModInitializer {
                 EntityType.ITEM_FRAME, mapBox.aabb(),
                 frame -> frame.getDirection().getAxis() != Direction.Axis.Y && frame.getItem().is(Items.FILLED_MAP)
             );
+            for (final ServerPlayer player : level.players()) {
+                ((ServerCommonPacketListenerImplExt)player.connection).mcscreenshare2$updateShouldFrameBeSent();
+            }
             for (final ItemFrame frame : frames) {
                 final BlockPos framePos = frame.getPos();
                 final Direction rightDir = frame.getDirection().getClockWise();
@@ -69,7 +78,9 @@ public class MinecraftScreenshare implements ModInitializer {
                     Optional.of(image.getMapPatch(frameX * 128, frameY * 128))
                 );
                 for (final ServerPlayer player : level.players()) {
-                    player.connection.send(packet);
+                    if (((ServerCommonPacketListenerImplExt)player.connection).mcscreenshare2$shouldFrameBeSent()) {
+                        player.connection.send(packet);
+                    }
                 }
             }
         });
@@ -94,5 +105,15 @@ public class MinecraftScreenshare implements ModInitializer {
             }
             ((MinecraftServerExt)server).mcscreenshare2$setMapImage(result);
         });
+    }
+
+    private static void updatePing(MinecraftServer server) {
+        if (server.getTickCount() % 5 != 0) return;
+        final int pingId = ThreadLocalRandom.current().nextInt();
+        for (final ServerPlayer player : server.getPlayerList().getPlayers()) {
+            final long time = System.currentTimeMillis();
+            ((ServerCommonPacketListenerImplExt)player.connection).mcscreenshare2$getLastPings().put(pingId, time);
+            player.connection.send(new ClientboundPingPacket(pingId));
+        }
     }
 }
