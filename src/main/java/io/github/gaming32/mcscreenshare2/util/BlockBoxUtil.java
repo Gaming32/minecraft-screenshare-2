@@ -1,4 +1,4 @@
-package io.github.gaming32.mcscreenshare2;
+package io.github.gaming32.mcscreenshare2.util;
 
 import net.minecraft.core.BlockBox;
 import net.minecraft.core.Direction;

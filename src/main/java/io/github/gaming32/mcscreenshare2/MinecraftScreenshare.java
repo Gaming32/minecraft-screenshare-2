@@ -1,8 +1,11 @@
 package io.github.gaming32.mcscreenshare2;
 
 import com.mojang.logging.LogUtils;
+import io.github.gaming32.mcscreenshare2.data.DisplayData;
+import io.github.gaming32.mcscreenshare2.data.MapWallLocation;
 import io.github.gaming32.mcscreenshare2.ext.MinecraftServerExt;
 import io.github.gaming32.mcscreenshare2.ext.ServerCommonPacketListenerImplExt;
+import io.github.gaming32.mcscreenshare2.util.BlockBoxUtil;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -91,11 +94,11 @@ public class MinecraftScreenshare implements ModInitializer {
 
     private static void updateScreenData(Robot robot, MinecraftServer server) {
         if ((server.getTickCount() & 2) != 0 && server.getPlayerCount() == 0) return;
+        final Rectangle area = DisplayData.get(server).getArea();
         CompletableFuture.runAsync(() -> {
-            // TODO: Configurable screen area
-            final int width = 1920;
-            final int height = 1080;
-            final BufferedImage image = robot.createScreenCapture(new Rectangle(width, height));
+            final int width = area.width;
+            final int height = area.height;
+            final BufferedImage image = robot.createScreenCapture(area);
             final MapImage result = new MapImage(width, height);
             final int[] rgb = image.getRGB(0, 0, width, height, null, 0, width);
             for (int y = 0; y < height; y++) {

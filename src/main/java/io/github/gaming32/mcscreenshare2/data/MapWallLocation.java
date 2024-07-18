@@ -1,12 +1,12 @@
-package io.github.gaming32.mcscreenshare2;
+package io.github.gaming32.mcscreenshare2.data;
 
+import io.github.gaming32.mcscreenshare2.MinecraftScreenshare;
+import io.github.gaming32.mcscreenshare2.util.ScreenshareCodecs;
 import net.minecraft.core.BlockBox;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.NotNull;
 
